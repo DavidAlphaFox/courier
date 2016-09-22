@@ -177,7 +177,10 @@ Within the body of the function, ensures that 'Message's are dispatched as neces
 -}
 withTransport :: IO Transport -> (Transport -> IO a) -> IO a
 withTransport factory fn = do
+  -- transport 是从factory中产生出来
   transport <- factory
+  -- 最终需要让传入的函数在transport上执行
+  -- 执行结束后，对transport进行了shutdown
   finally (fn transport)
    (shutdown transport)
 
@@ -187,6 +190,7 @@ Within the body of the function, ensure that there is a 'Dispatcher' for the 'En
 -}
 withEndpoint :: Transport -> Endpoint -> IO a  -> IO a
 withEndpoint transport endpoint fn = do
+  -- 绑定transport和endpoint
   d <- dispatch transport endpoint
   finally fn
     (stop d)
@@ -205,10 +209,13 @@ A helper for ensuring there is a 'Binding' of a specific 'Endpoint' to a specifi
 on the provided 'Transport' during a function.
 
 -}
+-- 绑定transport，endpoint，名字和RPC函数
 withBinding :: Transport -> Endpoint -> Name -> IO a -> IO a
 withBinding transport endpoint name actor = do
   atomically $ do
+    -- 得到endpoint中所绑定的服务的名称
     bindings <- readTVar $ boundEndpointNames endpoint
+    -- 
     if S.member name bindings
       then throw $ BindingExists name
       else modifyTVar (boundEndpointNames endpoint) $ S.insert name

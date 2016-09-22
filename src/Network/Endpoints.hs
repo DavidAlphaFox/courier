@@ -166,8 +166,11 @@ data Envelope = Envelope {
 {-|
 Create a new 'Endpoint' using the provided transports.
 -}
+-- 使用atomically进行STM操作
 newEndpoint :: IO Endpoint
 newEndpoint = atomically $ do
+  -- 创建一个inbound和一个outbound的通道
+  -- 同时创建一个新的名字的names的TVar
   inbound <- newMailbox
   outbound <- newMailbox
   names <- newTVar S.empty

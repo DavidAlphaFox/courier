@@ -89,8 +89,11 @@ instance Eq (Mailbox m) where
 {-|
 Build and returns a new instance of 'Mailbox'
 -}
+-- mailbox 包含两个TVar
+-- 一个用于读，一个用于写
 newMailbox :: STM (Mailbox m)
 newMailbox = do
+
   _read  <- newTVar []
   _write <- newTVar []
   return (Mailbox _read _write)
