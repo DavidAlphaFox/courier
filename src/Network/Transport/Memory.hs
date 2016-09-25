@@ -76,6 +76,8 @@ memoryDispatcher vBindings endpoint = do
 
 memoryDispatchEnvelope :: Bindings -> Envelope -> STM ()
 memoryDispatchEnvelope bindings env =
+  -- 直接找到内存通道上的另一半
+  -- 直接将消息发送给它
   case M.lookup (messageDestination env) bindings  of
     Nothing -> return ()
     Just destination -> postMessage destination (envelopeMessage env)
