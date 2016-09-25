@@ -358,6 +358,7 @@ hear endpoint name method = do
     return (args, reply caller rid)
     where
         reply caller rid result = do
+            -- 发送消息
             sendMessage endpoint caller $ encode $ Response rid name result
 
 {-|

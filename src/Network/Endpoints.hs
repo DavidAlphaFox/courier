@@ -225,6 +225,7 @@ instance Exception BindException
 {-|
 Send a 'Message' to specific 'Name' via the indicated 'Endpoint'.
 -}
+-- 从endpoint中取出Outbound来，将消息写入其中
 sendMessage :: Endpoint -> Name -> Message -> IO ()
 sendMessage endpoint name msg  = atomically $
     writeMailbox (endpointOutbound endpoint) $ Envelope Nothing name msg
@@ -258,6 +259,7 @@ Posts a 'Message' directly to an 'Endpoint', without use of a transport. This
 may be useful for applications that prefer to use the 'Endpoint''s 'Mailbox'
 as a general queue of ordered messages.
 -}
+-- 取出endpoint的Inbound，然后将消息写入其中
 postMessage :: Endpoint -> Message -> STM ()
 postMessage endpoint = writeMailbox (endpointInbound endpoint)
 
@@ -266,6 +268,7 @@ Select the next available message in the 'Endpoint' 'Mailbox' matching
 the supplied test function, or blocking until one is available. This function
 differs from 'receiveMessage' in that it supports out of order message reception.
 -}
+-- 从Endpoint中取出Inbound，然后将数据读取出来
 selectMessage :: Endpoint -> (Message -> Maybe v) -> IO v
 selectMessage endpoint testFn = atomically $ selectMailbox (endpointInbound endpoint) testFn
 

@@ -72,7 +72,13 @@ module Control.Concurrent.Mailbox (
 -- external imports
 
 import Control.Concurrent.STM
-
+{-
+  对Mailbox来说
+  永远都是写入Mailbox的_write
+  当读取的时候，优先读取Mailbox的_read
+  如果_read的数据是空的，那么将_write读取出来，并进行翻转放入_read中
+  这样会减少读取和写入的冲突
+-}
 --------------------------------------------------------------------------------
 --------------------------------------------------------------------------------
 
@@ -115,7 +121,10 @@ Write a value to a 'Mailbox'.
 -}
 writeMailbox :: Mailbox m -> m -> STM ()
 writeMailbox (Mailbox _read _write) msg = do
+    -- 读出已经有的消息了
     listend <- readTVar _write
+    -- 新的消息放入其中
+    -- 放在已经有的消息的前面
     writeTVar _write (msg:listend)
 
 {-|
@@ -134,6 +143,9 @@ readMailbox (Mailbox _read _write) = do
     [] -> do ys <- readTVar _write
              case ys of
                [] -> retry
+              -- write有数据
+              -- 将write进行翻转
+              -- 将翻转的结果写入read中
                _  -> case reverse ys of
                        [] -> error "readMailbox"
                        (z:zs) -> do writeTVar _write []
@@ -179,6 +191,7 @@ selectMailbox :: Mailbox m -> (m -> Maybe v) -> STM v
 selectMailbox (Mailbox _read _write) testFn = do
     -- 从_read中读取出message
     readMessages <- readTVar _read
+    -- 得到一个全新的消息
     let (maybeReadMsg,newRead) = extract testFn readMessages
     case maybeReadMsg of
         Just msg -> do
@@ -191,6 +204,7 @@ selectMailbox (Mailbox _read _write) testFn = do
                 Just msg -> do
                     writeTVar _write newWrite
                     return msg
+                -- 重试内存事务   
                 Nothing -> retry
 
 {-|

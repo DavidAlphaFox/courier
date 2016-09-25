@@ -126,6 +126,7 @@ can be stopped when no longer needed.
 -}
 dispatcher :: Mailboxes -> Endpoint -> IO Dispatcher
 dispatcher mailboxes endpoint = do
+  -- 异步化一个函数
   d <- async disp
   return Dispatcher {
     stop = cancel d
@@ -133,7 +134,7 @@ dispatcher mailboxes endpoint = do
   where
     disp = do
       atomically $ do
-        -- 读出消息风暴
+        -- 读出消息
         envelope <- readMailbox $ endpointOutbound endpoint
         -- 获取消息目标
         -- 获取消息体
@@ -170,9 +171,14 @@ who then only have to monitor a specific 'Mailbox' to know when there are messag
 -}
 dispatchMessage :: Mailboxes -> Name -> Message -> STM ()
 dispatchMessage mailboxes name message = do
+  -- 拿出相应的Map
   outbound <- readTVar mailboxes
+  -- 如果找到相应的mailbox
   mailbox <- case M.lookup name outbound of
+    -- 如果是首次发送消息，会没有相应的mailbox
+    -- 这个name是呼叫者的名字
     Nothing -> do
+      -- 建立一个新的mailbox并放入其中
       mailbox <- newMailbox
       modifyTVar mailboxes $ M.insert name mailbox
       return mailbox
@@ -199,6 +205,8 @@ withEndpoint :: Transport -> Endpoint -> IO a  -> IO a
 withEndpoint transport endpoint fn = do
   -- 绑定transport和endpoint
   -- 此时返回一个Dispatcher，其中是stop
+  -- 从transport中拿出dispatch函数
+  -- 并将该函数应用在endpoint上
   d <- dispatch transport endpoint
   finally fn
     (stop d)

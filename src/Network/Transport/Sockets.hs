@@ -210,6 +210,7 @@ messenger mailboxes endpoint connection =
   -- counting on race_ to kill reader & writer
   -- if messenger is killed; since it uses withAsync, it should
   -- 要么读，要么写
+  -- 同时执行，谁先成功，谁返回，剩下一个会被Cancel
   race_ receiver sender
   where
     receiver = do

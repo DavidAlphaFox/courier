@@ -84,6 +84,7 @@ tcpSocketResolver6 = socketResolver6 NS.Stream
 
 tcpBind :: Mailboxes -> NS.Family -> Resolver -> SocketConnections -> Endpoint -> Name -> IO Binding
 tcpBind mailboxes family resolver vConnections endpoint name = do
+  -- 会异步的进行监听
   listener <- async $ tcpListen mailboxes family resolver vConnections endpoint name
   -- 生成绑定数据
   -- 服务名称和监听器绑定
@@ -105,6 +106,7 @@ accept mailboxes socket vConnections endpoint = do
   -- 创建Connection，包含peer的Name，send，recv和close
   connection <- tcpConnection peer
   -- 创建新的messager
+  -- 这个messager会放在一个独立的线程中执行
   msngr <- async $ messenger mailboxes endpoint connection
   -- OK,创建新的Connection
   let conn = Connection {
