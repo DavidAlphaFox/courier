@@ -50,6 +50,7 @@ newTCPTransport :: NS.Family -> Resolver -> IO Transport
 newTCPTransport family resolver = atomically $ do
   vPeers <- newTVar M.empty
   mailboxes <- newTVar M.empty
+  -- 创建Transport
   return Transport {
     bind = tcpBind mailboxes family resolver vPeers,
     dispatch = dispatcher mailboxes,
@@ -84,6 +85,8 @@ tcpSocketResolver6 = socketResolver6 NS.Stream
 tcpBind :: Mailboxes -> NS.Family -> Resolver -> SocketConnections -> Endpoint -> Name -> IO Binding
 tcpBind mailboxes family resolver vConnections endpoint name = do
   listener <- async $ tcpListen mailboxes family resolver vConnections endpoint name
+  -- 生成绑定数据
+  -- 服务名称和监听器绑定
   return Binding {
     bindingName = name,
     unbind = cancel listener
@@ -97,20 +100,29 @@ tcpListen mailboxes family resolver vConnections endpoint name = do
 
 accept :: Mailboxes -> NS.Socket -> SocketConnections -> Endpoint -> IO ()
 accept mailboxes socket vConnections endpoint = do
+  -- 先完成TCP的链接
   (peer,peerAddress) <- NS.accept socket
+  -- 创建Connection，包含peer的Name，send，recv和close
   connection <- tcpConnection peer
+  -- 创建新的messager
   msngr <- async $ messenger mailboxes endpoint connection
+  -- OK,创建新的Connection
   let conn = Connection {
+    -- 当connection被删除的时候
+    -- 需要在vConnections中删除掉相应的peerAddress
     disconnect = do
       atomically $ modifyTVar vConnections $ M.delete peerAddress
+      -- 从任务队列中取消掉相应的messager
       cancel msngr
   }
+  -- 是否是一个重新连接的连接
   maybeOldConn <- atomically $ do
     connections <- readTVar vConnections
     let oldConn = M.lookup peerAddress connections
     modifyTVar vConnections $ M.insert peerAddress conn
     return oldConn
   case maybeOldConn of
+    -- 如果是OldConn的时候，就删除链接
     Just oldConn -> disconnect oldConn
     Nothing -> return ()
   accept mailboxes socket vConnections endpoint
@@ -124,7 +136,7 @@ tcpConnect family resolver _ name = do
   address <- resolve1 resolver name
   NS.connect socket address
   tcpConnection socket
-
+-- 根据Peer 构建一个新的Socket的Connection
 tcpConnection :: NS.Socket -> IO SocketConnection
 tcpConnection socket = do
   vName <- atomically newEmptyTMVar

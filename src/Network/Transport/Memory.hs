@@ -79,7 +79,7 @@ memoryDispatchEnvelope bindings env =
   case M.lookup (messageDestination env) bindings  of
     Nothing -> return ()
     Just destination -> postMessage destination (envelopeMessage env)
-
+-- 绑定内存通道
 memoryBind :: TBindings -> Endpoint -> Name -> IO Binding
 memoryBind vBindings endpoint name = atomically $ do
   bindings <- readTVar vBindings

@@ -209,9 +209,11 @@ messenger :: Mailboxes -> Endpoint -> SocketConnection -> IO ()
 messenger mailboxes endpoint connection =
   -- counting on race_ to kill reader & writer
   -- if messenger is killed; since it uses withAsync, it should
+  -- 要么读，要么写
   race_ receiver sender
   where
     receiver = do
+      -- 读信息
       smsg <- receiveSocketMessage connection
       -- TODO consider a way of using a message to identify the name of
       -- the endpoint on the other end of the connection
@@ -223,6 +225,9 @@ messenger mailboxes endpoint connection =
     sender = do
       msg <- atomically $ do
         -- this basically means we wait until we have a name
+        -- 读出peer名字
+        -- 从mailboxes中找出相应的消息队列
+        -- 从消息队列中拉取消息
         name <- readTMVar $ connectionDestination connection
         pullMessage mailboxes name
       sendSocketMessage connection $ encode $ SocketMessage msg

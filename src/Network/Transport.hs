@@ -133,9 +133,13 @@ dispatcher mailboxes endpoint = do
   where
     disp = do
       atomically $ do
+        -- 读出消息风暴
         envelope <- readMailbox $ endpointOutbound endpoint
+        -- 获取消息目标
+        -- 获取消息体
         let name = messageDestination envelope
             msg = envelopeMessage envelope
+        -- 分发消息
         dispatchMessage mailboxes name msg
       disp
 
@@ -150,7 +154,10 @@ without the use of a 'Transport'
 -}
 pullMessage :: Mailboxes -> Name -> STM Message
 pullMessage mailboxes destination = do
+  -- 找出所有的消息队列
   outbound <- readTVar mailboxes
+  -- 找出目标队列
+  -- 从里面读取相应的数据
   case M.lookup destination outbound of
     Nothing -> retry
     Just mailbox -> readMailbox mailbox
@@ -191,6 +198,7 @@ Within the body of the function, ensure that there is a 'Dispatcher' for the 'En
 withEndpoint :: Transport -> Endpoint -> IO a  -> IO a
 withEndpoint transport endpoint fn = do
   -- 绑定transport和endpoint
+  -- 此时返回一个Dispatcher，其中是stop
   d <- dispatch transport endpoint
   finally fn
     (stop d)
@@ -215,11 +223,13 @@ withBinding transport endpoint name actor = do
   atomically $ do
     -- 得到endpoint中所绑定的服务的名称
     bindings <- readTVar $ boundEndpointNames endpoint
-    -- 
+    -- 如果name是bindings中的一个
     if S.member name bindings
+      -- 如果存在的话，就直接丢出异常
       then throw $ BindingExists name
+      -- 原子更改绑定服务名称
       else modifyTVar (boundEndpointNames endpoint) $ S.insert name
-  binding <- bind transport endpoint name
+  binding <- (bind transport) endpoint name
   finally actor $ do
     unbind binding
     atomically $ modifyTVar (boundEndpointNames endpoint) $ S.delete name
@@ -265,6 +275,7 @@ data Connection = Connection {
 {-|
 A helper for ensuring that a 'Connection' is maintained during execution of a function.
 -}
+-- 绑定一个链接
 withConnection :: Transport -> Endpoint -> Name -> IO a -> IO a
 withConnection transport endpoint name fn = do
   connection <- connect transport endpoint name

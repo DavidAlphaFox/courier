@@ -180,7 +180,9 @@ The caller will wait until a matching response is received.
 -}
 call :: CallSite -> Name -> Method -> Message -> IO Message
 call (CallSite endpoint from) name method args = do
+    -- 创建请求ID
     rid <- mkRequestId
+    -- 创建请求
     let req = Request {requestId = rid,requestCaller = from,requestMethod = method, requestArgs = args}
     sendMessage endpoint name $ encode req
     selectMessage endpoint $ \msg -> do
@@ -322,9 +324,12 @@ application: @methodSelector method@ passed as an argument to 'selectMessage'.
 -}
 methodSelector :: Method -> Message -> Maybe (Name,RequestId,Message)
 methodSelector method msg = do
+    -- 解析收到的消息
     case decode msg of
         Left _ -> Nothing
+        -- 如果是Request消息
         Right (Request rid caller rmethod args) -> do
+            -- 并且方法相同
             if rmethod == method
                 then Just (caller,rid,args)
                 else Nothing
@@ -348,6 +353,7 @@ call.
 -}
 hear :: Endpoint -> Name -> Method -> IO (Message,Reply Message)
 hear endpoint name method = do
+    -- 从endpoint上得到新的消息
     (caller,rid,args) <- selectMessage endpoint $ methodSelector method
     return (args, reply caller rid)
     where

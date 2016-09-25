@@ -121,12 +121,16 @@ writeMailbox (Mailbox _read _write) msg = do
 {-|
 Read the next value from the 'Mailbox'.
 -}
+--  从相应的Mailbox中获得相应的数据
 readMailbox :: Mailbox m -> STM m
 readMailbox (Mailbox _read _write) = do
+  -- 从_read中的TVar中读取出相应的数据
   xs <- readTVar _read
   case xs of
+    -- 有可读取的数据的时候，先处理读取
     (x:xs') -> do writeTVar _read xs'
                   return x
+    -- 从write中去读取              
     [] -> do ys <- readTVar _write
              case ys of
                [] -> retry
@@ -173,6 +177,7 @@ matches (e.g., test functions returns @Just v@), return it.
 -}
 selectMailbox :: Mailbox m -> (m -> Maybe v) -> STM v
 selectMailbox (Mailbox _read _write) testFn = do
+    -- 从_read中读取出message
     readMessages <- readTVar _read
     let (maybeReadMsg,newRead) = extract testFn readMessages
     case maybeReadMsg of
@@ -269,6 +274,8 @@ Extract the first element from a list matching the
 provided test and return a new list without the matching
 element.
 -}
+-- 接受一个函数和一个数组
+-- 循环的检测匹配的消息
 extract :: (m -> Maybe v) -> [m] -> (Maybe v,[m])
 extract _ [] = (Nothing,[])
 extract test (x:xs) =
