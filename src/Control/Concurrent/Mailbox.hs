@@ -192,6 +192,7 @@ selectMailbox (Mailbox _read _write) testFn = do
     -- 从_read中读取出message
     readMessages <- readTVar _read
     -- 得到一个全新的消息
+    -- 之后返回剩余的消息
     let (maybeReadMsg,newRead) = extract testFn readMessages
     case maybeReadMsg of
         Just msg -> do
