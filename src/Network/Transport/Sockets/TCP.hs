@@ -48,6 +48,7 @@ type SocketConnections = TVar (M.Map NS.SockAddr Connection)
 
 newTCPTransport :: NS.Family -> Resolver -> IO Transport
 newTCPTransport family resolver = atomically $ do
+  -- Peer和mailbox的映射对象都是空Map
   vPeers <- newTVar M.empty
   mailboxes <- newTVar M.empty
   -- 创建Transport
@@ -61,6 +62,7 @@ newTCPTransport family resolver = atomically $ do
 {-|
 Create a 'Transport' for exchanging 'Message's between endpoints via TCP over IP
 -}
+-- 创建一个全新的TCP传输对象
 newTCPTransport4 :: Resolver -> IO Transport
 newTCPTransport4 = newTCPTransport NS.AF_INET
 
@@ -95,6 +97,7 @@ tcpBind mailboxes family resolver vConnections endpoint name = do
 
 tcpListen :: Mailboxes -> NS.Family -> Resolver -> SocketConnections -> Endpoint -> Name -> IO ()
 tcpListen mailboxes family resolver vConnections endpoint name = do
+  -- 创建监听的Socket
   socket <- socketListen family NS.Stream resolver name
   finally (accept mailboxes socket vConnections endpoint)
     (tcpUnbind socket)
@@ -142,6 +145,7 @@ tcpConnect family resolver _ name = do
 tcpConnection :: NS.Socket -> IO SocketConnection
 tcpConnection socket = do
   vName <- atomically newEmptyTMVar
+  -- 对SocketConnection进行映射
   return SocketConnection {
     connectionDestination = vName,
     sendSocketMessage = tcpSend socket,
@@ -174,5 +178,6 @@ tcpShutdown vPeers = do
   -- this is how we disconnect incoming connections
   -- we don't have to disconnect  outbound connectinos, because
   -- they should already be disconnected before here
+  -- 循环整个Map，然后断开所有的连接
   forM_ (M.elems peers) disconnect
   return ()
