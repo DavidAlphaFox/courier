@@ -264,6 +264,7 @@ Put a data item back onto a mailbox, where it will be the next item read.
 -}
 unGetMailbox :: Mailbox m -> m -> STM ()
 unGetMailbox (Mailbox _read _write) msg = do
+-- 将消息拿出后，再次放回去
   xs <- readTVar _read
   writeTVar _read (msg:xs)
 
