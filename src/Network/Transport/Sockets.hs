@@ -211,6 +211,7 @@ messenger mailboxes endpoint connection =
   -- if messenger is killed; since it uses withAsync, it should
   -- 要么读，要么写
   -- 同时执行，谁先成功，谁返回，剩下一个会被Cancel
+  -- 事实上，这两个线程完全是自我循环，没人会停止
   race_ receiver sender
   where
     receiver = do
@@ -220,7 +221,9 @@ messenger mailboxes endpoint connection =
       -- the endpoint on the other end of the connection
       case decode smsg of
         Left _ -> return ()
+        -- 名字消息，直接放入connection的peer中
         Right (IdentifySender name) -> atomically $ putTMVar (connectionDestination connection) name
+        -- 正常的消息，直接放到endpoint的消息队列中
         Right (SocketMessage msg) -> atomically $ postMessage endpoint msg
       receiver
     sender = do
