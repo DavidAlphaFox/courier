@@ -110,6 +110,7 @@ accept mailboxes socket vConnections endpoint = do
   connection <- tcpConnection peer
   -- 创建新的messager
   -- 这个messager会放在一个独立的线程中执行
+  -- 每有一个新的链接就会创建一个新的messenger
   msngr <- async $ messenger mailboxes endpoint connection
   -- OK,创建新的Connection
   let conn = Connection {
@@ -140,6 +141,7 @@ tcpConnect family resolver _ name = do
   socket <- NS.socket family NS.Stream NS.defaultProtocol
   address <- resolve1 resolver name
   NS.connect socket address
+  -- 链接成功后先建立tcpConnection结构
   tcpConnection socket
 -- 根据Peer 构建一个新的Socket的Connection
 tcpConnection :: NS.Socket -> IO SocketConnection

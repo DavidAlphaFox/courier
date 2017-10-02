@@ -184,17 +184,23 @@ the connection will automatically be re-attempted.
 -}
 connector :: Mailboxes -> Endpoint -> Name -> Connect -> IO ()
 connector mailboxes endpoint name transportConnect = loopUntilKilled $ do
+  -- 建立真正的链接
   connection <- transportConnect endpoint name
   origins <- atomically $ do
+    --  将自己绑定的名字放到connection中
     putTMVar (connectionDestination connection) name
     readTVar $ boundEndpointNames endpoint
   forM_ (S.elems origins) $ \origin ->
     -- atomically $ dispatchMessage mailboxes name $ encode $ IdentifySender origin
+    -- 将声明的服务的名字发送到对端去
     sendSocketMessage connection $ encode $ IdentifySender origin
   finally (messenger mailboxes endpoint connection) $
     disconnectSocket connection
   where
     loopUntilKilled fn =
+      -- 双层catch
+      -- 内部处理AsyncException，如果AsyncException则正常退出了
+      -- 发生其它异常，则重启 loopUntilKilled
       catch (catch fn untilKilled)
         (loop fn)
     loop :: IO () -> SomeException -> IO ()

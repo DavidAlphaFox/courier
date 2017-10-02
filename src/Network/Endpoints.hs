@@ -184,8 +184,8 @@ newEndpoint = atomically $ do
 Declare an 'Endpoint' as having the specified 'Name' while the supplied function executes. This can
 often be useful for establishing the 'Name' of a client or initiator of a 'Network.Transport.Connection',
 without requiring the client also have a 'Network.Transport.Binding'.
-
 -}
+-- 在客户端内声明服务的名字
 withName :: Endpoint -> Name -> IO a -> IO a
 withName endpoint origin actor = do
   atomically $ bindName endpoint origin
@@ -228,6 +228,7 @@ Send a 'Message' to specific 'Name' via the indicated 'Endpoint'.
 -- 从endpoint中取出Outbound来，将消息写入其中
 sendMessage :: Endpoint -> Name -> Message -> IO ()
 sendMessage endpoint name msg  = atomically $
+    -- 封包，放入outbound
     writeMailbox (endpointOutbound endpoint) $ Envelope Nothing name msg
 
 {-|
